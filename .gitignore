@@ -1,0 +1,52 @@
+# Environment & credentials
+.env
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# IDE & editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+nbproject/
+
+# Dependencies
+vendor/
+node_modules/
+bower_components/
+
+# Logs
+storage/logs/*.log
+*.log
+
+# Uploads & generated files
+storage/uploads/
+public/uploads/
+
+# Cache & temp files
+.cache/
+*.cache
+tmp/
+temp/
+
+# Database dumps with real data
+*.sql.bak
+*.sql.backup
+
+# Composer
+composer.phar
+composer.lock
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
