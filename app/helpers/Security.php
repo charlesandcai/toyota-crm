@@ -47,6 +47,20 @@ class Security
         return $_SESSION['user_id'] ?? null;
     }
 
+    public static function isAdmin(): bool
+    {
+        return ($_SESSION['role'] ?? '') === 'admin';
+    }
+
+    public static function requireAdmin(): void
+    {
+        self::requireAuth();
+        if (!self::isAdmin()) {
+            Response::error('Access denied. Administrator privileges required.', [], 403);
+            exit;
+        }
+    }
+
     public static function sanitize(string $input): string
     {
         return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');

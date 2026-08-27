@@ -9,6 +9,7 @@ require_once dirname(__DIR__, 2) . '/app/services/SalesMetricsService.php';
 require_once dirname(__DIR__, 2) . '/app/services/FollowUpService.php';
 require_once dirname(__DIR__, 2) . '/app/services/WarmLeadService.php';
 require_once dirname(__DIR__, 2) . '/app/services/WorkingDaysService.php';
+require_once dirname(__DIR__, 2) . '/app/services/CalendarEventService.php';
 
 class DashboardController
 {
@@ -19,7 +20,6 @@ class DashboardController
         $leadModel = new LeadModel();
         $settingsModel = new SettingsModel();
         $activityModel = new ActivityModel();
-        $salesMetrics = new SalesMetricsService();
         $workingDaysService = new WorkingDaysService();
 
         $month = (int) ($_GET['month'] ?? date('n'));
@@ -27,17 +27,20 @@ class DashboardController
         $today = date('Y-m-d');
         $db = Database::getConnection();
 
+        $userId = Security::isAdmin() ? null : Security::userId();
+        $salesMetrics = new SalesMetricsService($userId);
+
         // KPI Cards
-        $totalLeads = $leadModel->getTotalCount();
-        $activeDeals = $leadModel->getActiveDealsCount();
-        $warmLeads = $leadModel->getWarmLeadsCount();
-        $dealsToClose = $leadModel->getDealsToCloseCount();
+        $totalLeads = $leadModel->getTotalCount($userId);
+        $activeDeals = $leadModel->getActiveDealsCount($userId);
+        $warmLeads = $leadModel->getWarmLeadsCount($userId);
+        $dealsToClose = $leadModel->getDealsToCloseCount($userId);
 
         // Sales Target
         $salesData = $salesMetrics->getMonthlyData($year, $month);
 
         // Lead Generation
-        $leadGenData = $leadModel->getLeadsBySource($year, $month);
+        $leadGenData = $leadModel->getLeadsBySource($year, $month, $userId);
         $leadGenTargets = [];
         $targets = $settingsModel->getLeadGenerationTargets();
         foreach ($targets as $t) {
@@ -48,22 +51,10 @@ class DashboardController
         $workingDaysLeft = $salesData['working_days_left'];
 
         // Needs Attention - Overdue
-        $overdueLeads = $leadModel->findWithDetails(
-            ['quick_filter' => 'overdue'],
-            'l.next_step_date',
-            'ASC',
-            0,
-            10
-        );
+        $overdueLeads = $leadModel->getOverdueLeads($userId);
 
         // Needs Attention - Due Today
-        $dueTodayLeads = $leadModel->findWithDetails(
-            ['quick_filter' => 'due_today'],
-            'l.priority_level',
-            'ASC',
-            0,
-            10
-        );
+        $dueTodayLeads = $leadModel->getDueTodayLeads($userId);
 
         // Release Watch
         $releaseStages = WarmLeadService::getReleaseWatchStages();
@@ -76,28 +67,10 @@ class DashboardController
                 }
             }
         }
-        $releaseWatchLeads = [];
-        if (!empty($releaseStageIds)) {
-            $placeholders = implode(',', array_fill(0, count($releaseStageIds), '?'));
-            $releaseWatchLeads = $leadModel->fetchAll(
-                "SELECT l.*, ls.name as status_name, os.name as stage_name, os.color as stage_color,
-                        p.name as priority_name, p.color as priority_color, p.level as priority_level,
-                        vm.name as model_name, src.name as source_name
-                 FROM leads l
-                 LEFT JOIN lead_statuses ls ON l.status_id = ls.id
-                 LEFT JOIN opportunity_stages os ON l.opportunity_stage_id = os.id
-                 LEFT JOIN priorities p ON l.priority_id = p.id
-                 LEFT JOIN vehicle_models vm ON l.model_id = vm.id
-                 LEFT JOIN lead_sources src ON l.source_id = src.id
-                 WHERE l.archived = 0 AND l.opportunity_stage_id IN ({$placeholders})
-                 ORDER BY p.level ASC, os.sort_order DESC, CASE WHEN l.next_step_date IS NULL THEN 1 ELSE 0 END, l.next_step_date ASC
-                 LIMIT 15",
-                $releaseStageIds
-            );
-        }
+        $releaseWatchLeads = $leadModel->getReleaseWatchLeads($releaseStageIds, $userId);
 
         // Warm/Hot Leads
-        $allActiveLeads = $leadModel->findWithDetails([], 'p.level', 'ASC', 0, 50);
+        $allActiveLeads = $leadModel->getWarmHotLeads(50, $userId);
         $warmHotLeads = [];
         foreach ($allActiveLeads['leads'] as $lead) {
             if (WarmLeadService::isWarmOrHot($lead)) {
@@ -107,22 +80,25 @@ class DashboardController
         }
 
         // Pipeline Summary
-        $statusCounts = $leadModel->getLeadCountsByStatus();
-        $stageCounts = $db->query(
-            "SELECT os.id, os.name, os.color, COUNT(l.id) as count
-             FROM opportunity_stages os
-             LEFT JOIN leads l ON l.opportunity_stage_id = os.id AND l.archived = 0
-             WHERE os.active = 1
-             GROUP BY os.id, os.name, os.color
-             ORDER BY os.sort_order"
-        )->fetchAll();
+        $statusCounts = $leadModel->getLeadCountsByStatus($userId);
+        $stageCounts = $leadModel->getStageCounts($userId);
+
+        // Calendar events: TODAY / 1 WEEK / 1 MONTH
+        $calendarService = new CalendarEventService();
+        $todayEvents = $calendarService->getEvents($today, $today, $userId);
+        $weekStart = date('Y-m-d', strtotime('+1 day'));
+        $weekEnd = date('Y-m-d', strtotime('+7 days'));
+        $monthEnd = date('Y-m-d', strtotime('+30 days'));
+        $weekEvents = $calendarService->getEvents($weekStart, $weekEnd, $userId);
+        $monthEvents = $calendarService->getEvents($weekStart, $monthEnd, $userId);
 
         $activePage = 'dashboard';
         Response::view('dashboard.index', compact(
             'activePage', 'totalLeads', 'activeDeals', 'warmLeads', 'dealsToClose',
             'salesData', 'leadGenData', 'leadGenTargets', 'workingDaysLeft',
             'overdueLeads', 'dueTodayLeads', 'releaseWatchLeads', 'warmHotLeads',
-            'statusCounts', 'stageCounts', 'month', 'year'
+            'statusCounts', 'stageCounts', 'month', 'year',
+            'todayEvents', 'weekEvents', 'monthEvents'
         ));
     }
 }

@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS vehicle_colors (
 CREATE TABLE IF NOT EXISTS leads (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     lead_id VARCHAR(20) NOT NULL UNIQUE,
+    user_id INT UNSIGNED DEFAULT NULL,
     lead_name VARCHAR(255) NOT NULL,
     company VARCHAR(255) DEFAULT NULL,
     phone VARCHAR(50) DEFAULT NULL,
@@ -99,12 +100,15 @@ CREATE TABLE IF NOT EXISTS leads (
     next_step_date DATE DEFAULT NULL,
     location VARCHAR(255) DEFAULT NULL,
     notes TEXT DEFAULT NULL,
+    birthday DATE DEFAULT NULL,
+    release_date DATE DEFAULT NULL,
     archived TINYINT(1) NOT NULL DEFAULT 0,
     archived_at DATETIME NULL DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_leads_status (status_id),
+    INDEX idx_leads_user (user_id),
     INDEX idx_leads_stage (opportunity_stage_id),
     INDEX idx_leads_priority (priority_id),
     INDEX idx_leads_source (source_id),
@@ -115,6 +119,7 @@ CREATE TABLE IF NOT EXISTS leads (
     INDEX idx_leads_created (created_at),
     INDEX idx_leads_archived (archived),
     
+    CONSTRAINT fk_leads_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT fk_leads_status FOREIGN KEY (status_id) REFERENCES lead_statuses(id) ON DELETE SET NULL,
     CONSTRAINT fk_leads_stage FOREIGN KEY (opportunity_stage_id) REFERENCES opportunity_stages(id) ON DELETE SET NULL,
     CONSTRAINT fk_leads_priority FOREIGN KEY (priority_id) REFERENCES priorities(id) ON DELETE SET NULL,

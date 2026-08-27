@@ -22,6 +22,8 @@ class LeadController
     {
         Security::requireAuth();
 
+        $userId = Security::isAdmin() ? null : Security::userId();
+
         $filters = [];
         if (!empty($_GET['search'])) $filters['search'] = $_GET['search'];
         if (!empty($_GET['status_id'])) $filters['status_id'] = (int) $_GET['status_id'];
@@ -39,7 +41,7 @@ class LeadController
         $perPage = 25;
         $offset = ($page - 1) * $perPage;
 
-        $result = $this->leadModel->findWithDetails($filters, $sort, $direction, $offset, $perPage);
+        $result = $this->leadModel->findWithDetails($filters, $sort, $direction, $offset, $perPage, $userId);
 
         $totalLeads = $result['total'];
         $totalPages = max(1, (int) ceil($totalLeads / $perPage));
@@ -92,6 +94,7 @@ class LeadController
 
         $leadId = $this->leadModel->generateLeadId();
         $data['lead_id'] = $leadId;
+        $data['user_id'] = Security::userId();
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = date('Y-m-d H:i:s');
         $data['archived'] = 0;
@@ -134,7 +137,8 @@ class LeadController
         Security::requireAuth();
 
         $id = (int) ($_GET['params'][0] ?? 0);
-        $lead = $this->leadModel->findById($id);
+        $userId = Security::isAdmin() ? null : Security::userId();
+        $lead = $this->leadModel->findById($id, $userId);
 
         if (!$lead) {
             Url::redirect('leads');
@@ -164,7 +168,8 @@ class LeadController
         Security::requireAuth();
 
         $id = (int) ($_GET['params'][0] ?? 0);
-        $lead = $this->leadModel->findById($id);
+        $userId = Security::isAdmin() ? null : Security::userId();
+        $lead = $this->leadModel->findById($id, $userId);
 
         if (!$lead) {
             Url::redirect('leads');
@@ -194,6 +199,14 @@ class LeadController
         }
 
         $id = (int) ($_GET['params'][0] ?? 0);
+
+        // Authorization: verify ownership
+        $userId = Security::isAdmin() ? null : Security::userId();
+        if ($userId !== null && !$this->leadModel->ownsLead($id, $userId)) {
+            Response::error('Access denied.');
+            return;
+        }
+
         $data = $this->validateLeadInput();
         if (isset($data['errors'])) {
             Response::error('Validation failed.', $data['errors']);
@@ -224,6 +237,8 @@ class LeadController
     {
         Security::requireAuth();
 
+        $userId = Security::isAdmin() ? null : Security::userId();
+
         $filters = [];
         if (!empty($_GET['search'])) $filters['search'] = $_GET['search'];
         if (!empty($_GET['status_id'])) $filters['status_id'] = (int) $_GET['status_id'];
@@ -237,7 +252,7 @@ class LeadController
         $perPage = 25;
         $offset = ($page - 1) * $perPage;
 
-        $result = $this->leadModel->findArchived($filters, $sort, $direction, $offset, $perPage);
+        $result = $this->leadModel->findArchived($filters, $sort, $direction, $offset, $perPage, $userId);
 
         $totalLeads = $result['total'];
         $totalPages = max(1, (int) ceil($totalLeads / $perPage));
@@ -265,6 +280,13 @@ class LeadController
 
         $id = (int) ($_GET['params'][0] ?? 0);
 
+        // Authorization: verify ownership
+        $userId = Security::isAdmin() ? null : Security::userId();
+        if ($userId !== null && !$this->leadModel->ownsLead($id, $userId)) {
+            Response::error('Access denied.');
+            return;
+        }
+
         try {
             $this->leadModel->archive($id);
             
@@ -289,6 +311,13 @@ class LeadController
         }
 
         $id = (int) ($_GET['params'][0] ?? 0);
+
+        // Authorization: verify ownership
+        $userId = Security::isAdmin() ? null : Security::userId();
+        if ($userId !== null && !$this->leadModel->ownsLead($id, $userId)) {
+            Response::error('Access denied.');
+            return;
+        }
 
         try {
             $this->leadModel->restore($id);
@@ -325,6 +354,13 @@ class LeadController
 
         $id = (int) ($_GET['params'][0] ?? 0);
 
+        // Authorization: verify ownership
+        $userId = Security::isAdmin() ? null : Security::userId();
+        if ($userId !== null && !$this->leadModel->ownsLead($id, $userId)) {
+            Response::error('Access denied.');
+            return;
+        }
+
         try {
             $this->leadModel->forceDelete($id);
             
@@ -343,11 +379,13 @@ class LeadController
     {
         Security::requireAuth();
 
+        $userId = Security::isAdmin() ? null : Security::userId();
+
         $filters = [];
         if (!empty($_GET['search'])) $filters['search'] = $_GET['search'];
         if (!empty($_GET['status_id'])) $filters['status_id'] = (int) $_GET['status_id'];
 
-        $result = $this->leadModel->findWithDetails($filters, 'l.created_at', 'DESC', 0, 10000);
+        $result = $this->leadModel->findWithDetails($filters, 'l.created_at', 'DESC', 0, 10000, $userId);
 
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="leads_export_' . date('Y-m-d') . '.csv"');
@@ -433,6 +471,18 @@ class LeadController
 
         $location = trim($_POST['location'] ?? '');
         $data['location'] = $location ?: null;
+
+        $birthday = trim($_POST['birthday'] ?? '');
+        if ($birthday && !$this->isValidDate($birthday)) {
+            $errors['birthday'] = 'Please enter a valid date.';
+        }
+        $data['birthday'] = $birthday ?: null;
+
+        $releaseDate = trim($_POST['release_date'] ?? '');
+        if ($releaseDate && !$this->isValidDate($releaseDate)) {
+            $errors['release_date'] = 'Please enter a valid date.';
+        }
+        $data['release_date'] = $releaseDate ?: null;
 
         $notes = trim($_POST['notes'] ?? '');
         $data['notes'] = $notes ?: null;

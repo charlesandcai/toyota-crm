@@ -54,7 +54,7 @@ class Router
         }
 
         http_response_code(404);
-        require dirname(__DIR__) . '/views/404.php';
+        require dirname(__DIR__, 2) . '/views/404.php';
     }
 
     private static function dispatchApi(string $method, string $route): void

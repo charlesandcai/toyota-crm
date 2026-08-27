@@ -18,9 +18,11 @@ class ActivityController
     public function index(): void
     {
         Security::requireAuth();
+
+        $userId = Security::isAdmin() ? null : Security::userId();
         $month = (int) ($_GET['month'] ?? date('n'));
         $year = (int) ($_GET['year'] ?? date('Y'));
-        $activities = $this->activityModel->getByMonth($year, $month);
+        $activities = $this->activityModel->getByMonth($year, $month, $userId);
 
         $activePage = 'activities';
         Response::view('activities.index', compact('activePage', 'activities', 'month', 'year'));
@@ -30,6 +32,17 @@ class ActivityController
     {
         Security::requireAuth();
         $leadId = (int) ($_GET['params'][0] ?? 0);
+
+        // Verify lead ownership
+        $userId = Security::isAdmin() ? null : Security::userId();
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($leadId, $userId)) {
+                Url::redirect('leads');
+                return;
+            }
+        }
+
         Url::redirect('leads/' . $leadId);
     }
 
@@ -43,6 +56,17 @@ class ActivityController
         }
 
         $leadId = (int) ($_GET['params'][0] ?? 0);
+
+        // Verify lead ownership
+        $userId = Security::isAdmin() ? null : Security::userId();
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($leadId, $userId)) {
+                Response::error('Access denied.');
+                return;
+            }
+        }
+
         $activityType = trim($_POST['activity_type'] ?? '');
         $activityDate = trim($_POST['activity_date'] ?? date('Y-m-d\TH:i'));
         $notes = trim($_POST['notes'] ?? '');
@@ -66,8 +90,7 @@ class ActivityController
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
-            // Update lead's last contact and follow-up
-            $leadModel = new LeadModel();
+            $leadModel = $leadModel ?? new LeadModel();
             $updateData = [
                 'last_contact_date' => date('Y-m-d'),
             ];

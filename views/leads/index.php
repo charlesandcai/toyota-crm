@@ -3,6 +3,17 @@ $search = $_GET['search'] ?? '';
 $currentFilter = $_GET['filter'] ?? 'all';
 $currentSort = $sort ?? 'l.next_step_date';
 $currentDir = $direction ?? 'ASC';
+
+$leadsQuery = array_filter([
+    'search' => $search !== '' ? $search : null,
+    'filter' => $currentFilter !== 'all' ? $currentFilter : null,
+    'status_id' => $_GET['status_id'] ?? null,
+    'priority_id' => $_GET['priority_id'] ?? null,
+    'source_id' => $_GET['source_id'] ?? null,
+    'sort' => $currentSort,
+    'direction' => $currentDir,
+]);
+$leadsBase = Url::route('leads') . (empty($leadsQuery) ? '' : '&' . http_build_query($leadsQuery));
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
@@ -25,9 +36,16 @@ $currentDir = $direction ?? 'ASC';
         'active_deals' => 'Active Deals',
         'lost' => 'Lost',
     ];
-    foreach ($quickFilters as $key => $label): ?>
-        <a href="<?= Url::route('leads') ?>?filter=<?= $key ?>" 
-           class="quick-filter-btn <?= $currentFilter === $key ? 'active' : '' ?>">
+    foreach ($quickFilters as $key => $label):
+        $qfParams = $leadsQuery;
+        if ($key === 'all') {
+            unset($qfParams['filter']);
+        } else {
+            $qfParams['filter'] = $key;
+        }
+        $qfHref = Url::route('leads') . (empty($qfParams) ? '' : '&' . http_build_query($qfParams));
+    ?>
+        <a href="<?= $qfHref ?>" class="quick-filter-btn <?= $currentFilter === $key ? 'active' : '' ?>">
             <?= $label ?>
         </a>
     <?php endforeach; ?>
@@ -102,8 +120,15 @@ $currentDir = $direction ?? 'ASC';
         <table class="table table-crm">
             <thead>
                 <tr>
-                    <th><a href="?route=leads&sort=l.lead_name&direction=<?= $currentSort === 'l.lead_name' && $currentDir === 'ASC' ? 'DESC' : 'ASC' ?>" class="text-decoration-none text-muted">Lead ID</a></th>
-                    <th><a href="?route=leads&sort=l.lead_name&direction=<?= $currentSort === 'l.lead_name' && $currentDir === 'ASC' ? 'DESC' : 'ASC' ?>" class="text-decoration-none text-muted">Name</a></th>
+                    <?php
+                    $nameQ = $leadsQuery;
+                    $nameQ['sort'] = 'l.lead_name';
+                    $nameQ['direction'] = $currentSort === 'l.lead_name' && $currentDir === 'ASC' ? 'DESC' : 'ASC';
+                    unset($nameQ['page']);
+                    $nameSortHref = Url::route('leads') . '&' . http_build_query($nameQ);
+                    ?>
+                    <th><a href="<?= $nameSortHref ?>" class="text-decoration-none text-muted">Lead ID</a></th>
+                    <th><a href="<?= $nameSortHref ?>" class="text-decoration-none text-muted">Name</a></th>
                     <th>Model</th>
                     <th>Status</th>
                     <th>Stage</th>
@@ -252,16 +277,7 @@ $currentDir = $direction ?? 'ASC';
     <nav class="mt-3">
         <ul class="pagination pagination-sm justify-content-center">
             <?php
-            $baseUrl = Url::route('leads') . '?' . http_build_query(array_filter([
-                'route' => 'leads',
-                'search' => $search ?: null,
-                'filter' => $currentFilter !== 'all' ? $currentFilter : null,
-                'status_id' => $_GET['status_id'] ?? null,
-                'priority_id' => $_GET['priority_id'] ?? null,
-                'source_id' => $_GET['source_id'] ?? null,
-                'sort' => $currentSort,
-                'direction' => $currentDir,
-            ]));
+            $baseUrl = $leadsBase;
             ?>
             <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
                 <a class="page-link" href="<?= $baseUrl ?>&page=<?= $page - 1 ?>">Prev</a>

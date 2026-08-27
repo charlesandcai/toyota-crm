@@ -15,7 +15,6 @@ $thisYear = $currentYear;
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#models">Models</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#colors">Colors</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#targets">Targets</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#calendar">Calendar</a></li>
 </ul>
 
 <div class="tab-content">
@@ -293,64 +292,8 @@ $thisYear = $currentYear;
             </div>
         </div>
     </div>
-
-    <!-- Calendar -->
-    <div class="tab-pane fade" id="calendar">
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="card section-card">
-                    <div class="card-header fw-semibold">Working Days</div>
-                    <div class="card-body">
-                        <form method="POST" action="<?= Url::route('settings/working-days/update') ?>" onsubmit="event.preventDefault();submitAjaxForm(this,{onSuccess:()=>showToast('Working days saved','success')})">
-                            <?= Security::csrfField() ?>
-                            <?php foreach ($workingDays as $day => $isWorking): ?>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="working_days[]" value="<?= $day ?>" id="wd_<?= $day ?>" <?= $isWorking ? 'checked' : '' ?>>
-                                    <label class="form-check-label" for="wd_<?= $day ?>"><?= $day ?></label>
-                                </div>
-                            <?php endforeach; ?>
-                            <button type="submit" class="btn btn-sm btn-danger mt-2">Save Working Days</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card section-card">
-                    <div class="card-header fw-semibold d-flex justify-content-between">
-                        Holidays <?= $thisYear ?>
-                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addHolidayModal"><i class="bi bi-plus"></i></button>
-                    </div>
-                    <div class="card-body p-0">
-                        <?php if (empty($holidays)): ?>
-                            <div class="text-muted text-center py-3 small">No holidays configured.</div>
-                        <?php else: ?>
-                            <table class="table table-sm table-crm mb-0">
-                                <thead><tr><th>Date</th><th>Name</th><th></th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($holidays as $h): ?>
-                                        <tr>
-                                            <td><?= date('M d, Y', strtotime($h['holiday_date'])) ?></td>
-                                            <td><?= Security::escape($h['name']) ?></td>
-                                            <td>
-                                                <form method="POST" action="<?= Url::route('settings/holidays/delete') ?>" class="d-inline">
-                                                    <?= Security::csrfField() ?>
-                                                    <input type="hidden" name="id" value="<?= $h['id'] ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this holiday?')"><i class="bi bi-trash"></i></button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- Add Modals -->
 <div class="modal fade" id="addStatusModal" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content">
     <form method="POST" action="<?= Url::route('settings/statuses/store') ?>" onsubmit="event.preventDefault();submitAjaxForm(this,{onSuccess:()=>setTimeout(()=>location.reload(),500)})">
         <?= Security::csrfField() ?>
@@ -415,18 +358,6 @@ $thisYear = $currentYear;
         <div class="modal-header"><h6 class="modal-title">Add Color</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
             <input type="text" name="name" class="form-control" placeholder="Color name" required>
-        </div>
-        <div class="modal-footer"><button type="submit" class="btn btn-danger btn-sm">Save</button></div>
-    </form>
-</div></div></div>
-
-<div class="modal fade" id="addHolidayModal" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content">
-    <form method="POST" action="<?= Url::route('settings/holidays/store') ?>" onsubmit="event.preventDefault();submitAjaxForm(this,{onSuccess:()=>setTimeout(()=>location.reload(),500)})">
-        <?= Security::csrfField() ?>
-        <div class="modal-header"><h6 class="modal-title">Add Holiday</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-            <input type="date" name="holiday_date" class="form-control mb-2" required>
-            <input type="text" name="holiday_name" class="form-control" placeholder="Holiday name" required>
         </div>
         <div class="modal-footer"><button type="submit" class="btn btn-danger btn-sm">Save</button></div>
     </form>

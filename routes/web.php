@@ -28,6 +28,9 @@ Router::get('/leads/export', 'LeadController@export');
 // Pipeline
 Router::get('/pipeline', 'PipelineController@index');
 
+// Calendar
+Router::get('/calendar', 'CalendarController@index');
+
 // Activities
 Router::get('/activities', 'ActivityController@index');
 
@@ -66,3 +69,9 @@ Router::post('/settings/holidays/delete', 'SettingsController@deleteHoliday');
 Router::get('/imports', 'ImportController@index');
 Router::post('/imports/upload', 'ImportController@upload');
 Router::post('/imports/process', 'ImportController@process');
+
+// User Management (admin only)
+Router::get('/settings/users', 'UserController@index');
+Router::post('/settings/users/store', 'UserController@store');
+Router::post('/settings/users/update', 'UserController@update');
+Router::post('/settings/users/password', 'UserController@updatePassword');

@@ -1,5 +1,21 @@
 <?php
 $monthName = date('F', mktime(0, 0, 0, $month, 1));
+
+function renderDashEvent(array $ev): string
+{
+    $meta = array_filter([
+        $ev['model_name'] ?? '',
+        $ev['stage_name'] ?? '',
+        $ev['priority_name'] ?? '',
+    ]);
+    $onClick = $ev['lead_url'] ? " onclick=\"location.href='" . Security::escape($ev['lead_url']) . "'\"" : '';
+    return '<div class="dash-event mb-1"' . $onClick . '>'
+        . '<span class="ev-dot" style="background:' . Security::escape($ev['color']) . '"></span>'
+        . '<div class="flex-fill">'
+        . '<span class="dash-event-title">' . Security::escape($ev['title']) . '</span>'
+        . '<span class="dash-event-meta d-block">' . Security::escape(implode(' &middot; ', $meta)) . '</span>'
+        . '</div></div>';
+}
 ?>
 
 <!-- Date selector -->
@@ -81,6 +97,85 @@ $monthName = date('F', mktime(0, 0, 0, $month, 1));
                 </div>
             </div>
         </a>
+    </div>
+</div>
+
+<!-- Calendar Events: Today / 1 Week / 1 Month -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card section-card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-day me-2 text-danger"></i>Today</span>
+                <span class="badge bg-light text-dark"><?= count($todayEvents) ?></span>
+            </div>
+            <div class="card-body p-2">
+                <?php if (empty($todayEvents)): ?>
+                    <div class="empty-state py-3">
+                        <i class="bi bi-calendar-x d-block"></i>
+                        <p class="mb-0">No scheduled events today.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach (array_slice($todayEvents, 0, 8) as $ev): ?>
+                        <?= renderDashEvent($ev) ?>
+                    <?php endforeach; ?>
+                    <?php if (count($todayEvents) > 8): ?>
+                        <div class="text-center mt-1 small"><a href="<?= Url::route('calendar') ?>" class="text-decoration-none">View all in Calendar</a></div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card section-card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-week me-2 text-primary"></i>Next 7 Days</span>
+                <span class="badge bg-light text-dark"><?= count($weekEvents) ?></span>
+            </div>
+            <div class="card-body p-2">
+                <?php if (empty($weekEvents)): ?>
+                    <div class="empty-state py-3">
+                        <i class="bi bi-calendar-x d-block"></i>
+                        <p class="mb-0">No upcoming events this week.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach (array_slice($weekEvents, 0, 8) as $ev): ?>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-fill me-2"><?= renderDashEvent($ev) ?></div>
+                            <span class="small text-muted text-nowrap"><?= date('M d', strtotime($ev['date'])) ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                    <?php if (count($weekEvents) > 8): ?>
+                        <div class="text-center mt-1 small"><a href="<?= Url::route('calendar') ?>" class="text-decoration-none">View all in Calendar</a></div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card section-card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-month me-2 text-success"></i>Next 30 Days</span>
+                <a href="<?= Url::route('calendar') ?>" class="btn btn-sm btn-outline-primary">View Calendar</a>
+            </div>
+            <div class="card-body p-2">
+                <?php if (empty($monthEvents)): ?>
+                    <div class="empty-state py-3">
+                        <i class="bi bi-calendar-x d-block"></i>
+                        <p class="mb-0">No upcoming events this month.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach (array_slice($monthEvents, 0, 8) as $ev): ?>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-fill me-2"><?= renderDashEvent($ev) ?></div>
+                            <span class="small text-muted text-nowrap"><?= date('M d', strtotime($ev['date'])) ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                    <?php if (count($monthEvents) > 8): ?>
+                        <div class="text-center mt-1 small"><a href="<?= Url::route('calendar') ?>" class="text-decoration-none">View all in Calendar</a></div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -10,6 +10,7 @@ Router::apiGet('/api/dashboard/sales-target', 'ApiController@salesTarget');
 Router::apiGet('/api/dashboard/lead-generation', 'ApiController@leadGeneration');
 Router::apiGet('/api/dashboard/daily-leads', 'ApiController@dailyLeads');
 Router::apiGet('/api/leads', 'ApiController@leadsList');
+Router::apiGet('/api/calendar/events', 'CalendarController@events');
 
 Router::apiPost('/api/leads/{id}/status', 'ApiController@updateLeadStatus');
 Router::apiPost('/api/leads/{id}/stage', 'ApiController@updateLeadStage');

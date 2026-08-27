@@ -60,6 +60,10 @@ $daysSinceContact = $daysSinceContact ?? null;
                         <div class="info-label">Location</div>
                         <div class="info-value"><?= Security::escape($lead['location'] ?? '-') ?></div>
                     </div>
+                    <div class="col-sm-6">
+                        <div class="info-label">Birthday</div>
+                        <div class="info-value"><?= $lead['birthday'] ? date('M d, Y', strtotime($lead['birthday'])) : '-' ?></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -76,6 +80,10 @@ $daysSinceContact = $daysSinceContact ?? null;
                     <div class="col-sm-6">
                         <div class="info-label">Color</div>
                         <div class="info-value"><?= Security::escape($lead['color_name'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label">Release Date</div>
+                        <div class="info-value"><?= $lead['release_date'] ? date('M d, Y', strtotime($lead['release_date'])) : '-' ?></div>
                     </div>
                 </div>
             </div>

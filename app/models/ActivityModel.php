@@ -27,40 +27,53 @@ class ActivityModel extends Model
         return $this->insert('activities', $data);
     }
 
-    public function getRecent(int $limit = 10): array
+    public function getRecent(int $limit = 10, ?int $userId = null): array
     {
+        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
+        $params = $userId !== null ? [$userId] : [];
+
         return $this->fetchAll(
             "SELECT a.*, l.lead_name, l.lead_id as lead_code, vm.name as model_name
              FROM activities a
              JOIN leads l ON a.lead_id = l.id
              LEFT JOIN vehicle_models vm ON l.model_id = vm.id
-             WHERE l.archived = 0
+             WHERE l.archived = 0 {$userCondition}
              ORDER BY a.activity_date DESC
              LIMIT ?",
-            [$limit]
+            array_merge($params, [$limit])
         );
     }
 
-    public function getByMonth(int $year, int $month): array
+    public function getByMonth(int $year, int $month, ?int $userId = null): array
     {
+        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
+        $params = [$year, $month];
+        if ($userId !== null) {
+            $params[] = $userId;
+        }
+
         return $this->fetchAll(
             "SELECT a.*, l.lead_name, l.lead_id as lead_code
              FROM activities a
              JOIN leads l ON a.lead_id = l.id
-             WHERE YEAR(a.activity_date) = ? AND MONTH(a.activity_date) = ? AND l.archived = 0
+             WHERE YEAR(a.activity_date) = ? AND MONTH(a.activity_date) = ? AND l.archived = 0 {$userCondition}
              ORDER BY a.activity_date DESC",
-            [$year, $month]
+            $params
         );
     }
 
-    public function getTodayActivities(): array
+    public function getTodayActivities(?int $userId = null): array
     {
+        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
+        $params = $userId !== null ? [$userId] : [];
+
         return $this->fetchAll(
             "SELECT a.*, l.lead_name, l.lead_id as lead_code
              FROM activities a
              JOIN leads l ON a.lead_id = l.id
-             WHERE DATE(a.activity_date) = CURDATE() AND l.archived = 0
-             ORDER BY a.activity_date DESC"
+             WHERE DATE(a.activity_date) = CURDATE() AND l.archived = 0 {$userCondition}
+             ORDER BY a.activity_date DESC",
+            $params
         );
     }
 }

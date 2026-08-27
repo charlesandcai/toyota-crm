@@ -12,6 +12,10 @@ $errors = $errors ?? [];
             <?= Security::csrfField() ?>
             
             <div class="row g-3">
+                <div class="col-12">
+                    <div class="form-section">Customer Information</div>
+                    <hr>
+                </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Lead Name <span class="text-danger">*</span></label>
                     <input type="text" name="lead_name" class="form-control <?= isset($errors['lead_name']) ? 'is-invalid' : '' ?>" 
@@ -31,8 +35,24 @@ $errors = $errors ?? [];
                            value="<?= Security::escape($lead['email'] ?? '') ?>">
                 </div>
 
-                <div class="col-12"><hr></div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Location</label>
+                    <input type="text" name="location" class="form-control" 
+                           value="<?= Security::escape($lead['location'] ?? '') ?>">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Birthday</label>
+                    <input type="date" name="birthday" class="form-control <?= isset($errors['birthday']) ? 'is-invalid' : '' ?>" 
+                           value="<?= Security::escape($lead['birthday'] ?? '') ?>">
+                    <?php if (isset($errors['birthday'])): ?>
+                        <div class="invalid-feedback"><?= Security::escape($errors['birthday']) ?></div>
+                    <?php endif; ?>
+                </div>
 
+                <div class="col-12">
+                    <div class="form-section">Deal Information</div>
+                    <hr>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium">Status</label>
                     <select name="status_id" class="form-select">
@@ -77,6 +97,10 @@ $errors = $errors ?? [];
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="col-12">
+                    <div class="form-section">Vehicle Information</div>
+                    <hr>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium">Vehicle Model</label>
                     <select name="model_id" class="form-select">
@@ -99,9 +123,19 @@ $errors = $errors ?? [];
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Release Date</label>
+                    <input type="date" name="release_date" class="form-control <?= isset($errors['release_date']) ? 'is-invalid' : '' ?>" 
+                           value="<?= Security::escape($lead['release_date'] ?? '') ?>">
+                    <?php if (isset($errors['release_date'])): ?>
+                        <div class="invalid-feedback"><?= Security::escape($errors['release_date']) ?></div>
+                    <?php endif; ?>
+                </div>
 
-                <div class="col-12"><hr></div>
-
+                <div class="col-12">
+                    <div class="form-section">Follow-up &amp; Activity Dates</div>
+                    <hr>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium">Initial Contact Date</label>
                     <input type="date" name="initial_contact_date" class="form-control" 
@@ -121,11 +155,6 @@ $errors = $errors ?? [];
                     <label class="form-label fw-medium">Next Step Date</label>
                     <input type="date" name="next_step_date" class="form-control" 
                            value="<?= Security::escape($lead['next_step_date'] ?? '') ?>">
-                </div>
-                <div class="col-md-8">
-                    <label class="form-label fw-medium">Location</label>
-                    <input type="text" name="location" class="form-control" 
-                           value="<?= Security::escape($lead['location'] ?? '') ?>">
                 </div>
 
                 <div class="col-12">

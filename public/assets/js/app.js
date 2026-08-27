@@ -43,8 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Generic form submission via AJAX
     window.submitAjaxForm = async function(form, options = {}) {
-        event.preventDefault();
-        
         const btn = form.querySelector('[type="submit"]');
         const origText = btn ? btn.innerHTML : '';
         
@@ -117,20 +115,34 @@ document.addEventListener('DOMContentLoaded', function() {
         return response.json();
     };
 
-    // Quick filter buttons
-    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const filter = this.dataset.filter;
-            const url = new URL(window.location);
-            if (filter && filter !== 'all') {
-                url.searchParams.set('filter', filter);
-            } else {
-                url.searchParams.delete('filter');
-            }
-            window.location = url;
-        });
+    // AJAX form delegation (forms marked with data-ajax="true")
+    document.addEventListener('submit', function(e) {
+        const form = e.target.closest('form[data-ajax="true"]');
+        if (!form) return;
+        e.preventDefault();
+        const options = {};
+        if (form.hasAttribute('data-reload')) {
+            options.onSuccess = function(data) {
+                sessionStorage.setItem('crm_flash', JSON.stringify({
+                    message: data.message || 'Saved successfully.',
+                    type: 'success'
+                }));
+                window.location.reload();
+            };
+        }
+        submitAjaxForm(form, options);
     });
+
+    // Show any flash message left over from an AJAX form that reloaded the page
+    (function() {
+        const raw = sessionStorage.getItem('crm_flash');
+        if (!raw) return;
+        sessionStorage.removeItem('crm_flash');
+        try {
+            const flash = JSON.parse(raw);
+            showToast(flash.message || 'Saved successfully.', flash.type || 'success');
+        } catch (err) { /* ignore malformed flash data */ }
+    })();
 
     // Confirmation dialogs
     window.confirmAction = function(message, callback) {

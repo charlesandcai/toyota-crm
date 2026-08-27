@@ -73,7 +73,6 @@ class ImportController
         }
         fclose($handle);
 
-        // Store temp data in session
         $_SESSION['import_headers'] = $headers;
         $_SESSION['import_rows'] = $rows;
         $_SESSION['import_filename'] = $file['name'];
@@ -108,6 +107,7 @@ class ImportController
         $settingsModel = new SettingsModel();
         $leadModel = new LeadModel();
         $db = Database::getConnection();
+        $currentUserId = Security::userId();
 
         $statuses = $this->buildLookup($settingsModel->getStatuses(), 'name');
         $stages = $this->buildLookup($settingsModel->getStages(), 'name');
@@ -145,7 +145,6 @@ class ImportController
                     continue;
                 }
 
-                // Resolve lookups
                 if (!empty($data['status']) && isset($statuses[$data['status']])) {
                     $data['status_id'] = $statuses[$data['status']];
                 } else {
@@ -188,13 +187,12 @@ class ImportController
                 }
                 unset($data['vehicle_color']);
 
-                // Skip imported lead_id (auto-generate), follow-up status, days since last contact
                 unset($data['imported_lead_id']);
                 unset($data['follow_up_status']);
                 unset($data['days_since_last_contact']);
 
-                // Generate lead ID
                 $data['lead_id'] = $leadModel->generateLeadId();
+                $data['user_id'] = $currentUserId;
                 $data['archived'] = 0;
                 $data['created_at'] = date('Y-m-d H:i:s');
                 $data['updated_at'] = date('Y-m-d H:i:s');

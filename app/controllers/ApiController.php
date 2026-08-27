@@ -21,17 +21,18 @@ class ApiController
     {
         $this->checkAuth();
         $leadModel = new LeadModel();
-        $salesMetrics = new SalesMetricsService();
+        $userId = Security::isAdmin() ? null : Security::userId();
+        $salesMetrics = new SalesMetricsService($userId);
 
         $month = (int) ($_GET['month'] ?? date('n'));
         $year = (int) ($_GET['year'] ?? date('Y'));
         $salesData = $salesMetrics->getMonthlyData($year, $month);
 
         Response::success('', [
-            'total_leads' => $leadModel->getTotalCount(),
-            'active_deals' => $leadModel->getActiveDealsCount(),
-            'warm_leads' => $leadModel->getWarmLeadsCount(),
-            'deals_to_close' => $leadModel->getDealsToCloseCount(),
+            'total_leads' => $leadModel->getTotalCount($userId),
+            'active_deals' => $leadModel->getActiveDealsCount($userId),
+            'warm_leads' => $leadModel->getWarmLeadsCount($userId),
+            'deals_to_close' => $leadModel->getDealsToCloseCount($userId),
             'sales_target' => $salesData,
         ]);
     }
@@ -40,9 +41,10 @@ class ApiController
     {
         $this->checkAuth();
         $leadModel = new LeadModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
-        $overdue = $leadModel->findWithDetails(['quick_filter' => 'overdue'], 'l.next_step_date', 'ASC', 0, 10);
-        $dueToday = $leadModel->findWithDetails(['quick_filter' => 'due_today'], 'l.priority_level', 'ASC', 0, 10);
+        $overdue = $leadModel->getOverdueLeads($userId);
+        $dueToday = $leadModel->getDueTodayLeads($userId);
 
         Response::success('', [
             'overdue' => $overdue['leads'],
@@ -55,6 +57,7 @@ class ApiController
         $this->checkAuth();
         $leadModel = new LeadModel();
         $settingsModel = new SettingsModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
         $releaseStages = WarmLeadService::getReleaseWatchStages();
         $stages = $settingsModel->getStages();
@@ -65,21 +68,7 @@ class ApiController
             }
         }
 
-        $leads = [];
-        if (!empty($stageIds)) {
-            $placeholders = implode(',', array_fill(0, count($stageIds), '?'));
-            $leads = $leadModel->fetchAll(
-                "SELECT l.*, os.name as stage_name, p.name as priority_name, p.level as priority_level, vm.name as model_name
-                 FROM leads l
-                 LEFT JOIN opportunity_stages os ON l.opportunity_stage_id = os.id
-                 LEFT JOIN priorities p ON l.priority_id = p.id
-                 LEFT JOIN vehicle_models vm ON l.model_id = vm.id
-                 WHERE l.archived = 0 AND l.opportunity_stage_id IN ({$placeholders})
-                 ORDER BY p.level ASC, os.sort_order DESC, CASE WHEN l.next_step_date IS NULL THEN 1 ELSE 0 END, l.next_step_date ASC
-                 LIMIT 15",
-                $stageIds
-            );
-        }
+        $leads = $leadModel->getReleaseWatchLeads($stageIds, $userId);
 
         Response::success('', ['leads' => $leads]);
     }
@@ -88,8 +77,9 @@ class ApiController
     {
         $this->checkAuth();
         $leadModel = new LeadModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
-        $allActive = $leadModel->findWithDetails([], 'p.level', 'ASC', 0, 50);
+        $allActive = $leadModel->getWarmHotLeads(50, $userId);
         $warm = [];
         foreach ($allActive['leads'] as $lead) {
             if (WarmLeadService::isWarmOrHot($lead)) {
@@ -105,15 +95,17 @@ class ApiController
     {
         $this->checkAuth();
         $leadModel = new LeadModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
-        $stageCounts = $leadModel->getLeadCountsByStatus();
+        $stageCounts = $leadModel->getLeadCountsByStatus($userId);
         Response::success('', ['stages' => $stageCounts]);
     }
 
     public function salesTarget(): void
     {
         $this->checkAuth();
-        $salesMetrics = new SalesMetricsService();
+        $userId = Security::isAdmin() ? null : Security::userId();
+        $salesMetrics = new SalesMetricsService($userId);
 
         $month = (int) ($_GET['month'] ?? date('n'));
         $year = (int) ($_GET['year'] ?? date('Y'));
@@ -126,11 +118,12 @@ class ApiController
         $this->checkAuth();
         $leadModel = new LeadModel();
         $settingsModel = new SettingsModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
         $month = (int) ($_GET['month'] ?? date('n'));
         $year = (int) ($_GET['year'] ?? date('Y'));
 
-        $leads = $leadModel->getLeadsBySource($year, $month);
+        $leads = $leadModel->getLeadsBySource($year, $month, $userId);
         $targets = $settingsModel->getLeadGenerationTargets();
 
         $workingDaysService = new WorkingDaysService();
@@ -146,19 +139,26 @@ class ApiController
     public function dailyLeads(): void
     {
         $this->checkAuth();
-        $leadModel = new LeadModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
         $today = date('Y-m-d');
         $db = Database::getConnection();
+
+        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
+        $params = [$today];
+        if ($userId !== null) {
+            $params[] = $userId;
+        }
+
         $stmt = $db->prepare(
             "SELECT src.name, COUNT(l.id) as count
              FROM lead_sources src
-             LEFT JOIN leads l ON l.source_id = src.id AND DATE(l.initial_contact_date) = ? AND l.archived = 0
+             LEFT JOIN leads l ON l.source_id = src.id AND DATE(l.initial_contact_date) = ? AND l.archived = 0 {$userCondition}
              WHERE src.active = 1
              GROUP BY src.id, src.name
              ORDER BY src.sort_order"
         );
-        $stmt->execute([$today]);
+        $stmt->execute($params);
         $dailyLeads = $stmt->fetchAll();
 
         Response::success('', ['leads' => $dailyLeads, 'date' => $today]);
@@ -168,6 +168,7 @@ class ApiController
     {
         $this->checkAuth();
         $leadModel = new LeadModel();
+        $userId = Security::isAdmin() ? null : Security::userId();
 
         $query = trim($_GET['q'] ?? '');
         if ($query === '') {
@@ -175,7 +176,7 @@ class ApiController
             return;
         }
 
-        $leads = $leadModel->searchNames($query);
+        $leads = $leadModel->searchNames($query, $userId);
         Response::success('', $leads);
     }
 
@@ -183,10 +184,21 @@ class ApiController
     {
         $this->checkAuth();
         $id = (int) ($_GET['params'][0] ?? 0);
+        $userId = Security::isAdmin() ? null : Security::userId();
+
+        // Authorization check
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($id, $userId)) {
+                Response::error('Access denied.', [], 403);
+                return;
+            }
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
         $value = $data['value'] ?? null;
 
-        $leadModel = new LeadModel();
+        $leadModel = $leadModel ?? new LeadModel();
         $leadModel->updateById($id, ['status_id' => $value ? (int) $value : null]);
         Response::success('Status updated.');
     }
@@ -195,10 +207,20 @@ class ApiController
     {
         $this->checkAuth();
         $id = (int) ($_GET['params'][0] ?? 0);
+        $userId = Security::isAdmin() ? null : Security::userId();
+
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($id, $userId)) {
+                Response::error('Access denied.', [], 403);
+                return;
+            }
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
         $value = $data['value'] ?? null;
 
-        $leadModel = new LeadModel();
+        $leadModel = $leadModel ?? new LeadModel();
         $leadModel->updateById($id, ['opportunity_stage_id' => $value ? (int) $value : null]);
         Response::success('Stage updated.');
     }
@@ -207,10 +229,20 @@ class ApiController
     {
         $this->checkAuth();
         $id = (int) ($_GET['params'][0] ?? 0);
+        $userId = Security::isAdmin() ? null : Security::userId();
+
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($id, $userId)) {
+                Response::error('Access denied.', [], 403);
+                return;
+            }
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
         $value = $data['value'] ?? null;
 
-        $leadModel = new LeadModel();
+        $leadModel = $leadModel ?? new LeadModel();
         $leadModel->updateById($id, ['priority_id' => $value ? (int) $value : null]);
         Response::success('Priority updated.');
     }
@@ -219,6 +251,17 @@ class ApiController
     {
         $this->checkAuth();
         $id = (int) ($_GET['params'][0] ?? 0);
+        $userId = Security::isAdmin() ? null : Security::userId();
+
+        // Verify lead ownership
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($id, $userId)) {
+                Response::error('Access denied.', [], 403);
+                return;
+            }
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
 
         $activityModel = new ActivityModel();
@@ -233,7 +276,7 @@ class ApiController
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $leadModel = new LeadModel();
+        $leadModel = $leadModel ?? new LeadModel();
         $updateData = ['last_contact_date' => date('Y-m-d')];
         if (!empty($data['next_step'])) $updateData['next_step'] = $data['next_step'];
         if (!empty($data['next_step_date'])) $updateData['next_step_date'] = $data['next_step_date'];
@@ -246,9 +289,19 @@ class ApiController
     {
         $this->checkAuth();
         $id = (int) ($_GET['params'][0] ?? 0);
+        $userId = Security::isAdmin() ? null : Security::userId();
+
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($id, $userId)) {
+                Response::error('Access denied.', [], 403);
+                return;
+            }
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
 
-        $leadModel = new LeadModel();
+        $leadModel = $leadModel ?? new LeadModel();
         $updateData = [];
         if (isset($data['next_step'])) $updateData['next_step'] = $data['next_step'] ?: null;
         if (isset($data['next_step_date'])) $updateData['next_step_date'] = $data['next_step_date'] ?: null;
@@ -261,10 +314,20 @@ class ApiController
     {
         $this->checkAuth();
         $id = (int) ($_GET['params'][0] ?? 0);
+        $userId = Security::isAdmin() ? null : Security::userId();
+
+        if ($userId !== null) {
+            $leadModel = new LeadModel();
+            if (!$leadModel->ownsLead($id, $userId)) {
+                Response::error('Access denied.', [], 403);
+                return;
+            }
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
         $stageId = $data['stage_id'] ?? null;
 
-        $leadModel = new LeadModel();
+        $leadModel = $leadModel ?? new LeadModel();
         $leadModel->updateById($id, ['opportunity_stage_id' => $stageId ? (int) $stageId : null]);
         Response::success('Pipeline stage updated.');
     }
