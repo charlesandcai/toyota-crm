@@ -1,4 +1,4 @@
-/* Toyota Silang CRM - Calendar */
+/* Toyota CRM - Calendar */
 
 (function () {
     'use strict';
@@ -151,7 +151,7 @@
         const monday = startOfWeek(cursor);
         const today = todayISO();
         const header = el('div', 'cal-grid-row cal-grid-header cal-grid-row-7');
-        const body = el('div', 'cal-grid-body');
+        const body = el('div', 'cal-grid-body cal-grid-body-week');
 
         for (let i = 0; i < 7; i++) {
             const d = addDays(monday, i);

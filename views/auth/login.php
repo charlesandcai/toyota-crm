@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Toyota Silang CRM</title>
+    <title>Login - Toyota CRM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -39,7 +39,7 @@
     <div class="card login-card">
         <div class="login-header">
             <i class="bi bi-car-front-fill text-danger"></i>
-            <h4 class="mt-2 mb-0">Toyota Silang CRM</h4>
+            <h4 class="mt-2 mb-0">Toyota CRM</h4>
             <small class="text-white-50">Sign in to your account</small>
         </div>
         <div class="card-body p-4">

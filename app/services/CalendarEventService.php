@@ -124,6 +124,7 @@ class CalendarEventService
                 'lead_name'     => null,
                 'model_name'    => null,
                 'stage_name'    => null,
+                'stage_color'   => null,
                 'priority_name' => null,
                 'next_step'     => null,
                 'notes'         => null,
@@ -152,9 +153,10 @@ class CalendarEventService
             'lead_id'       => (int) $lead['id'],
             'lead_url'      => Url::route('leads/' . $lead['id']),
             'lead_name'     => $lead['lead_name'] ?? null,
-            'model_name'    => $lead['model_name'] ?? null,
-            'stage_name'    => $lead['stage_name'] ?? null,
-            'priority_name' => $lead['priority_name'] ?? null,
+'model_name'    => $lead['model_name'] ?? null,
+                'stage_name'    => $lead['stage_name'] ?? null,
+                'stage_color'   => $lead['stage_color'] ?? null,
+                'priority_name' => $lead['priority_name'] ?? null,
             'next_step'     => $lead['next_step'] ?? null,
             'notes'         => $lead['notes'] ?? null,
             'recurring'     => in_array($typeKey, ['birthday', 'anniversary'], true),
@@ -178,6 +180,7 @@ class CalendarEventService
         $stmt = $this->db->prepare(
             "SELECT l.*,
                     os.name AS stage_name,
+                    os.color AS stage_color,
                     p.name AS priority_name,
                     vm.name AS model_name
              FROM leads l

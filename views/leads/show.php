@@ -1,6 +1,18 @@
 <?php
+require_once dirname(__DIR__, 2) . '/app/services/YearsStayedService.php';
 $followupStatus = $followupStatus ?? 'No follow-up';
 $daysSinceContact = $daysSinceContact ?? null;
+
+$fmtMoney = function ($value): string {
+    return $value !== null && $value !== '' ? '₱' . number_format((float) $value, 2) : '';
+};
+$fmtDate = function ($value): string {
+    return $value ? date('M d, Y', strtotime($value)) : '';
+};
+$leadCustomerType = $lead['customer_type'] ?? null;
+$isCorporate = $leadCustomerType === 'Corporate';
+$primaryName = $isCorporate ? ($lead['company_name'] ?? $lead['lead_name']) : $lead['lead_name'];
+$hasSpouse = ($lead['spouse_exists'] ?? null) === 'Yes';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
@@ -28,15 +40,51 @@ $daysSinceContact = $daysSinceContact ?? null;
 <div class="row g-3">
     <!-- Main Info -->
     <div class="col-lg-8">
+        <!-- Customer Profile -->
         <div class="card section-card mb-3">
-            <div class="card-header fw-semibold">Contact Information</div>
+            <div class="card-header fw-semibold">Customer Profile</div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-sm-6">
-                        <div class="info-label">Phone</div>
+                        <div class="info-label">Customer Type</div>
+                        <?php if ($leadCustomerType): ?>
+                            <span class="badge bg-<?= $isCorporate ? 'purple' : 'blue' ?> bg-opacity-10" style="color:<?= $isCorporate ? '#6C3483' : '#1F618D' ?>;font-size:0.85rem">
+                                <?= Security::escape($leadCustomerType) ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="text-muted">-</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label"><?= $isCorporate ? 'Company Name' : 'Full Name' ?></div>
+                        <div class="info-value"><?= Security::escape($primaryName) ?></div>
+                    </div>
+                    <?php if ($isCorporate): ?>
+                        <div class="col-sm-6">
+                            <div class="info-label">Representative</div>
+                            <div class="info-value"><?= Security::escape($lead['representative_name'] ?? '-') ?></div>
+                        </div>
+                    <?php else: ?>
+                        <div class="col-sm-6">
+                            <div class="info-label">Company</div>
+                            <div class="info-value"><?= Security::escape($lead['company'] ?? '-') ?></div>
+                        </div>
+                    <?php endif; ?>
+                    <div class="col-sm-6">
+                        <div class="info-label">Phone / Mobile</div>
                         <div class="info-value">
                             <?php if ($lead['phone']): ?>
                                 <a href="tel:<?= Security::escape($lead['phone']) ?>" class="text-decoration-none"><?= Security::escape($lead['phone']) ?></a>
+                            <?php else: ?>
+                                <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label">Telephone Number</div>
+                        <div class="info-value">
+                            <?php if ($lead['telephone_number']): ?>
+                                <a href="tel:<?= Security::escape($lead['telephone_number']) ?>" class="text-decoration-none"><?= Security::escape($lead['telephone_number']) ?></a>
                             <?php else: ?>
                                 <span class="text-muted">-</span>
                             <?php endif; ?>
@@ -53,35 +101,172 @@ $daysSinceContact = $daysSinceContact ?? null;
                         </div>
                     </div>
                     <div class="col-sm-6">
-                        <div class="info-label">Company</div>
-                        <div class="info-value"><?= Security::escape($lead['company'] ?? '-') ?></div>
+                        <div class="info-label">TIN Number</div>
+                        <div class="info-value"><?= Security::escape($lead['tin_number'] ?? '-') ?></div>
                     </div>
+                    <?php if (!$isCorporate): ?>
+                        <div class="col-sm-6">
+                            <div class="info-label">Birthday</div>
+                            <div class="info-value"><?= $fmtDate($lead['birthday'] ?? null) ?: '-' ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Number of Dependents</div>
+                            <div class="info-value"><?= $lead['number_of_dependents'] !== null ? (int) $lead['number_of_dependents'] : '-' ?></div>
+                        </div>
+                    <?php endif; ?>
                     <div class="col-sm-6">
-                        <div class="info-label">Location</div>
+                        <div class="info-label">Address</div>
                         <div class="info-value"><?= Security::escape($lead['location'] ?? '-') ?></div>
                     </div>
                     <div class="col-sm-6">
-                        <div class="info-label">Birthday</div>
-                        <div class="info-value"><?= $lead['birthday'] ? date('M d, Y', strtotime($lead['birthday'])) : '-' ?></div>
+                        <div class="info-label">Address Ownership</div>
+                        <div class="info-value"><?= Security::escape($lead['address_ownership'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label">Address Since</div>
+                        <div class="info-value">
+                            <?= $fmtDate($lead['address_since'] ?? null) ?: '-' ?>
+                            <?php $addrYears = YearsStayedService::formatYears($lead['address_since'] ?? null); ?>
+                            <?php if ($addrYears !== ''): ?>
+                                <span class="text-muted">(<?= Security::escape($addrYears) ?>)</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <?php if ($lead['employer_name'] || $lead['employer_address'] || $lead['employer_address_since'] || $lead['position'] || $lead['monthly_salary'] !== null || $lead['other_income'] !== null): ?>
+            <!-- Employment / Business -->
+            <div class="card section-card mb-3">
+                <div class="card-header fw-semibold"><?= $isCorporate ? 'Business Details' : 'Employment / Business' ?></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="info-label"><?= $isCorporate ? 'Business Name' : 'Employer Name' ?></div>
+                            <div class="info-value"><?= Security::escape($lead['employer_name'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label"><?= $isCorporate ? 'Business Address' : 'Employer Address' ?></div>
+                            <div class="info-value"><?= Security::escape($lead['employer_address'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Employer Address Since</div>
+                            <div class="info-value">
+                                <?= $fmtDate($lead['employer_address_since'] ?? null) ?: '-' ?>
+                                <?php $empYears = YearsStayedService::formatYears($lead['employer_address_since'] ?? null); ?>
+                                <?php if ($empYears !== ''): ?>
+                                    <span class="text-muted">(<?= Security::escape($empYears) ?>)</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label"><?= $isCorporate ? 'Representative Position' : 'Position' ?></div>
+                            <div class="info-value"><?= Security::escape($lead['position'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label"><?= $isCorporate ? 'Monthly Income' : 'Monthly Salary' ?></div>
+                            <div class="info-value"><?= $fmtMoney($lead['monthly_salary'] ?? null) ?: '-' ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Other Source of Income</div>
+                            <div class="info-value"><?= $fmtMoney($lead['other_income'] ?? null) ?: '-' ?></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($hasSpouse): ?>
+            <!-- Spouse -->
+            <div class="card section-card mb-3">
+                <div class="card-header fw-semibold">Spouse</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="info-label">Spouse Name</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_name'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">TIN Number</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_tin_number'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Telephone Number</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_telephone_number'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Address</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_address'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Address Ownership</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_address_ownership'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Number of Dependents</div>
+                            <div class="info-value"><?= $lead['spouse_number_of_dependents'] !== null ? (int) $lead['spouse_number_of_dependents'] : '-' ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Address Since</div>
+                            <div class="info-value">
+                                <?= $fmtDate($lead['spouse_address_since'] ?? null) ?: '-' ?>
+                                <?php $spYears = YearsStayedService::formatYears($lead['spouse_address_since'] ?? null); ?>
+                                <?php if ($spYears !== ''): ?>
+                                    <span class="text-muted">(<?= Security::escape($spYears) ?>)</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="col-12"><hr class="my-1"></div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Employer Name</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_employer_name'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Employer Address</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_employer_address'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Employer Address Since</div>
+                            <div class="info-value">
+                                <?= $fmtDate($lead['spouse_employer_address_since'] ?? null) ?: '-' ?>
+                                <?php $spEmpYears = YearsStayedService::formatYears($lead['spouse_employer_address_since'] ?? null); ?>
+                                <?php if ($spEmpYears !== ''): ?>
+                                    <span class="text-muted">(<?= Security::escape($spEmpYears) ?>)</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Position</div>
+                            <div class="info-value"><?= Security::escape($lead['spouse_position'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Monthly Salary</div>
+                            <div class="info-value"><?= $fmtMoney($lead['spouse_monthly_salary'] ?? null) ?: '-' ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-label">Other Source of Income</div>
+                            <div class="info-value"><?= $fmtMoney($lead['spouse_other_income'] ?? null) ?: '-' ?></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Vehicle Interest -->
         <div class="card section-card mb-3">
             <div class="card-header fw-semibold">Vehicle Interest</div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <div class="info-label">Model</div>
                         <div class="info-value"><?= Security::escape($lead['model_name'] ?? '-') ?></div>
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <div class="info-label">Color</div>
                         <div class="info-value"><?= Security::escape($lead['color_name'] ?? '-') ?></div>
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <div class="info-label">Release Date</div>
                         <div class="info-value"><?= $lead['release_date'] ? date('M d, Y', strtotime($lead['release_date'])) : '-' ?></div>
                     </div>
@@ -131,7 +316,15 @@ $daysSinceContact = $daysSinceContact ?? null;
                             <span class="text-muted">-</span>
                         <?php endif; ?>
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
+                        <div class="info-label">Buyer Type</div>
+                        <div class="info-value"><?= Security::escape($lead['buyer_type'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="info-label">Purpose of Buying</div>
+                        <div class="info-value"><?= Security::escape($lead['purchase_purpose'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-4">
                         <div class="info-label">Source</div>
                         <div class="info-value"><?= Security::escape($lead['source_name'] ?? '-') ?></div>
                     </div>

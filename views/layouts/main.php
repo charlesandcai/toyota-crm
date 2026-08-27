@@ -1,14 +1,14 @@
 <?php
 $activePage = $activePage ?? 'dashboard';
 $sidebarCollapsed = $_COOKIE['sidebar_collapsed'] ?? '0';
-$faviconVer = '3';
+$faviconVer = '4';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toyota Silang CRM</title>
+    <title>Toyota CRM</title>
 
     <!-- Apple touch icons -->
     <link rel="apple-touch-icon" sizes="57x57" href="<?= Url::asset('images/apple-icon-57x57.png') ?>?v=<?= $faviconVer ?>">
@@ -24,6 +24,7 @@ $faviconVer = '3';
     <link rel="apple-touch-icon" href="<?= Url::asset('images/apple-icon.png') ?>?v=<?= $faviconVer ?>">
 
     <!-- Standard favicons -->
+    <link rel="icon" type="image/x-icon" href="<?= Url::base() ?>/favicon.ico?v=<?= $faviconVer ?>">
     <link rel="icon" type="image/png" sizes="192x192" href="<?= Url::asset('images/android-icon-192x192.png') ?>?v=<?= $faviconVer ?>">
     <link rel="icon" type="image/png" sizes="96x96" href="<?= Url::asset('images/favicon-96x96.png') ?>?v=<?= $faviconVer ?>">
     <link rel="icon" type="image/png" sizes="32x32" href="<?= Url::asset('images/favicon-32x32.png') ?>?v=<?= $faviconVer ?>">
@@ -50,7 +51,7 @@ $faviconVer = '3';
             </button>
             <a class="navbar-brand d-flex align-items-center" href="<?= Url::route('dashboard') ?>">
                 <img src="<?= Url::asset('images/favicon-32x32.png') ?>?v=<?= $faviconVer ?>" alt="TSC" width="28" height="28" class="me-2 brand-logo">
-                <span class="brand-text">Toyota Silang CRM</span>
+                <span class="brand-text">Toyota CRM</span>
             </a>
             <div class="d-flex align-items-center">
                 <a href="<?= Url::route('leads/create') ?>" class="btn btn-danger btn-sm me-3 d-none d-md-inline-flex align-items-center">

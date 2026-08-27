@@ -444,6 +444,15 @@
     margin: 0.4rem 0 1rem;
 }
 
+/* Customer profile form */
+.years-stayed {
+    font-size: 0.85rem;
+    min-height: 1.5rem;
+    padding: 0.25rem 0;
+}
+.cust-corporate .form-section,
+.cust-individual .form-section { color: var(--crm-gray); }
+
 /* Responsive */
 @media (max-width: 767.98px) {
     .sidebar { display: none !important; }
@@ -459,7 +468,13 @@
 }
 
 /* Calendar */
-.cal-grid { min-height: 320px; }
+.cal-grid {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 320px;
+    box-sizing: border-box;
+}
 
 .cal-grid-row { display: grid; }
 .cal-grid-row-7 { grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -478,7 +493,8 @@
     padding: 0.4rem 0.25rem;
 }
 
-.cal-grid-body { min-width: 640px; }
+.cal-grid-body { min-width: 0; max-width: 100%; }
+.cal-grid-body-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 
 .cal-day {
     position: relative;
@@ -582,11 +598,21 @@
 .dash-event:hover { border-color: var(--crm-primary); background: #f9fbfe; }
 .dash-event-title { font-size: 0.85rem; font-weight: 500; color: #212529; display: block; }
 .dash-event-meta { font-size: 0.72rem; color: var(--crm-gray); }
-
-@media (max-width: 1199.98px) {
-    .cal-grid-body { min-width: calc(100vw - 3.5rem); }
+.event-type-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    white-space: nowrap;
 }
+.badge-stage { font-size: 0.68rem; }
+.cursor-pointer { cursor: pointer; }
 
 @media (max-width: 767.98px) {
     .cal-grid { overflow-x: auto; }
+    .cal-grid-header,
+    .cal-grid-body { min-width: 640px; }
 }

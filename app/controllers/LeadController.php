@@ -424,16 +424,41 @@ class LeadController
         $data = [];
         $errors = [];
 
-        $leadName = trim($_POST['lead_name'] ?? '');
-        if ($leadName === '') {
-            $errors['lead_name'] = 'Lead name is required.';
-        } elseif (mb_strlen($leadName) > 255) {
-            $errors['lead_name'] = 'Lead name must not exceed 255 characters.';
+        $customerType = trim($_POST['customer_type'] ?? '');
+        if (!in_array($customerType, ['Individual', 'Corporate'], true)) {
+            $errors['customer_type'] = 'Customer type is required.';
         }
-        $data['lead_name'] = $leadName;
+        $data['customer_type'] = $customerType ?: null;
 
-        $company = trim($_POST['company'] ?? '');
-        $data['company'] = $company ?: null;
+        if ($customerType === 'Corporate') {
+            $companyName = trim($_POST['company_name'] ?? '');
+            if ($companyName === '') {
+                $errors['company_name'] = 'Company name is required.';
+            } elseif (mb_strlen($companyName) > 255) {
+                $errors['company_name'] = 'Company name must not exceed 255 characters.';
+            }
+            $data['company_name'] = $companyName ?: null;
+            $data['representative_name'] = trim($_POST['representative_name'] ?? '') ?: null;
+            $data['lead_name'] = $companyName;
+            $data['company'] = $companyName ?: null;
+        } else {
+            $data['company_name'] = null;
+            $data['representative_name'] = null;
+
+            $leadName = trim($_POST['lead_name'] ?? '');
+            if ($leadName === '') {
+                $errors['lead_name'] = 'Lead name is required.';
+            } elseif (mb_strlen($leadName) > 255) {
+                $errors['lead_name'] = 'Lead name must not exceed 255 characters.';
+            }
+            $data['lead_name'] = $leadName;
+
+            $company = trim($_POST['company'] ?? '');
+            $data['company'] = $company ?: null;
+        }
+
+        $data['tin_number'] = $this->readPlain($_POST['tin_number'] ?? '', 50);
+        $data['telephone_number'] = $this->readPlain($_POST['telephone_number'] ?? '', 50);
 
         $phone = trim($_POST['phone'] ?? '');
         $data['phone'] = $phone ?: null;
@@ -484,6 +509,47 @@ class LeadController
         }
         $data['release_date'] = $releaseDate ?: null;
 
+        $this->readDate('address_since', 'Address since', $data, $errors);
+        $this->readDate('employer_address_since', 'Employer address since', $data, $errors);
+        $data['address_ownership'] = $this->readEnum(['Rent', 'Owned', 'Mortgaged'], $_POST['address_ownership'] ?? '');
+        $data['number_of_dependents'] = $this->readInt('number_of_dependents', 'Number of dependents', $errors);
+
+        $data['employer_name'] = $this->readPlain($_POST['employer_name'] ?? '', 255);
+        $data['employer_address'] = $this->readPlain($_POST['employer_address'] ?? '', 255);
+        $data['position'] = $this->readPlain($_POST['position'] ?? '', 100);
+        $this->readMoney('monthly_salary', 'Monthly salary', $data, $errors);
+        $this->readMoney('other_income', 'Other source of income', $data, $errors);
+
+        $spouseExists = trim($_POST['spouse_exists'] ?? '');
+        if (!in_array($spouseExists, ['Yes', 'No'], true)) {
+            $spouseExists = '';
+        }
+
+        if ($customerType === 'Individual' && $spouseExists === 'Yes') {
+            $data['spouse_exists'] = 'Yes';
+            $data['spouse_name'] = $this->readPlain($_POST['spouse_name'] ?? '', 255);
+            if ($data['spouse_name'] === null || $data['spouse_name'] === '') {
+                $errors['spouse_name'] = 'Spouse name is required.';
+            }
+            $data['spouse_tin_number'] = $this->readPlain($_POST['spouse_tin_number'] ?? '', 50);
+            $data['spouse_telephone_number'] = $this->readPlain($_POST['spouse_telephone_number'] ?? '', 50);
+            $data['spouse_address'] = $this->readPlain($_POST['spouse_address'] ?? '', 255);
+            $data['spouse_address_ownership'] = $this->readEnum(['Rent', 'Owned', 'Mortgaged'], $_POST['spouse_address_ownership'] ?? '');
+            $data['spouse_number_of_dependents'] = $this->readInt('spouse_number_of_dependents', 'Spouse number of dependents', $errors);
+            $this->readDate('spouse_address_since', 'Spouse address since', $data, $errors);
+            $data['spouse_employer_name'] = $this->readPlain($_POST['spouse_employer_name'] ?? '', 255);
+            $data['spouse_employer_address'] = $this->readPlain($_POST['spouse_employer_address'] ?? '', 255);
+            $this->readDate('spouse_employer_address_since', 'Spouse employer address since', $data, $errors);
+            $data['spouse_position'] = $this->readPlain($_POST['spouse_position'] ?? '', 100);
+            $this->readMoney('spouse_monthly_salary', 'Spouse monthly salary', $data, $errors);
+            $this->readMoney('spouse_other_income', 'Spouse other source of income', $data, $errors);
+        } else {
+            $this->clearSpouseFields($data);
+        }
+
+        $data['buyer_type'] = $this->readEnum(['First Time', 'Additional Purchase', 'Replacement'], $_POST['buyer_type'] ?? '');
+        $data['purchase_purpose'] = $this->readEnum(['Business / Work', 'Personal / Family'], $_POST['purchase_purpose'] ?? '');
+
         $notes = trim($_POST['notes'] ?? '');
         $data['notes'] = $notes ?: null;
 
@@ -492,6 +558,83 @@ class LeadController
         }
 
         return $data;
+    }
+
+    private function clearSpouseFields(array &$data): void
+    {
+        $data['spouse_exists'] = null;
+        $data['spouse_name'] = null;
+        $data['spouse_tin_number'] = null;
+        $data['spouse_telephone_number'] = null;
+        $data['spouse_address'] = null;
+        $data['spouse_address_ownership'] = null;
+        $data['spouse_number_of_dependents'] = null;
+        $data['spouse_address_since'] = null;
+        $data['spouse_employer_name'] = null;
+        $data['spouse_employer_address'] = null;
+        $data['spouse_employer_address_since'] = null;
+        $data['spouse_position'] = null;
+        $data['spouse_monthly_salary'] = null;
+        $data['spouse_other_income'] = null;
+    }
+
+    private function readPlain(string $value, int $maxLength): ?string
+    {
+        $value = trim($value);
+        if ($value === '' || mb_strlen($value) > $maxLength) {
+            return null;
+        }
+        return $value;
+    }
+
+    private function readEnum(array $allowed, string $value): ?string
+    {
+        $value = trim($value);
+        return in_array($value, $allowed, true) ? $value : null;
+    }
+
+    private function readDate(string $key, string $label, array &$data, array &$errors): void
+    {
+        $value = trim($_POST[$key] ?? '');
+        if ($value === '') {
+            $data[$key] = null;
+            return;
+        }
+        if (!$this->isValidDate($value)) {
+            $errors[$key] = $label . ' is not a valid date.';
+            $data[$key] = null;
+            return;
+        }
+        $data[$key] = $value;
+    }
+
+    private function readInt(string $key, string $label, array &$errors): ?int
+    {
+        $raw = trim($_POST[$key] ?? '');
+        if ($raw === '') {
+            return null;
+        }
+        if (!ctype_digit($raw)) {
+            $errors[$key] = $label . ' must be a whole number.';
+            return null;
+        }
+        return (int) $raw;
+    }
+
+    private function readMoney(string $key, string $label, array &$data, array &$errors): void
+    {
+        $raw = trim($_POST[$key] ?? '');
+        if ($raw === '') {
+            $data[$key] = null;
+            return;
+        }
+        $clean = str_replace(['₱', 'PHP', ',', ' '], '', $raw);
+        if ($clean === '' || !is_numeric($clean)) {
+            $errors[$key] = $label . ' must be a valid amount.';
+            $data[$key] = null;
+            return;
+        }
+        $data[$key] = round((float) $clean, 2);
     }
 
     private function isValidDate(string $date): bool

@@ -1,4 +1,4 @@
--- Toyota Silang CRM Seed Data
+-- Toyota CRM Seed Data
 -- Default configuration and optional demo data
 
 SET NAMES utf8mb4;
@@ -95,7 +95,7 @@ INSERT INTO working_days (day_of_week, is_working) VALUES
 INSERT INTO settings (setting_key, setting_value) VALUES
 ('closed_release_stage', 'Released'),
 ('closing_ratio_method', 'deals / leads_this_month'),
-('app_name', 'Toyota Silang CRM'),
+('app_name', 'Toyota CRM'),
 ('app_timezone', 'Asia/Manila');
 
 -- Philippine Holidays 2026 (sample)

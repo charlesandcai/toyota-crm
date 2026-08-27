@@ -1,4 +1,4 @@
-/* Toyota Silang CRM - Main JS */
+/* Toyota CRM - Main JS */
 
 document.addEventListener('DOMContentLoaded', function() {
 

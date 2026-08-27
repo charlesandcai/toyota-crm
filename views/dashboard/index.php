@@ -3,18 +3,56 @@ $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
 function renderDashEvent(array $ev): string
 {
-    $meta = array_filter([
-        $ev['model_name'] ?? '',
-        $ev['stage_name'] ?? '',
-        $ev['priority_name'] ?? '',
-    ]);
+    $color = $ev['color'] ?? '#6c757d';
+    $stageColor = $ev['stage_color'] ?? $color;
+    $typeLabel = $ev['type_label'] ?? 'Event';
+    $customer = $ev['lead_name'] ?? $ev['title'] ?? '';
     $onClick = $ev['lead_url'] ? " onclick=\"location.href='" . Security::escape($ev['lead_url']) . "'\"" : '';
-    return '<div class="dash-event mb-1"' . $onClick . '>'
-        . '<span class="ev-dot" style="background:' . Security::escape($ev['color']) . '"></span>'
+
+    $meta = [];
+    if (!empty($ev['model_name'])) {
+        $meta[] = '<span class="badge bg-light text-dark border">' . Security::escape($ev['model_name']) . '</span>';
+    }
+    if (!empty($ev['stage_name'])) {
+        $meta[] = '<span class="badge badge-stage" style="background:' . Security::escape($stageColor) . '">' . Security::escape($ev['stage_name']) . '</span>';
+    }
+    if (!empty($ev['priority_name'])) {
+        $meta[] = '<span class="badge priority-' . strtolower((string) $ev['priority_name']) . '">' . Security::escape($ev['priority_name']) . '</span>';
+    }
+    $metaHtml = $meta
+        ? '<div class="dash-event-meta d-flex flex-wrap gap-1 mt-1">' . implode('', $meta) . '</div>'
+        : '';
+
+    return '<div class="dash-event mb-2"' . $onClick . '>'
+        . '<span class="ev-dot" style="background:' . Security::escape($color) . '"></span>'
         . '<div class="flex-fill">'
-        . '<span class="dash-event-title">' . Security::escape($ev['title']) . '</span>'
-        . '<span class="dash-event-meta d-block">' . Security::escape(implode(' &middot; ', $meta)) . '</span>'
+        . '<div class="d-flex align-items-center flex-wrap gap-2">'
+        . '<span class="event-type-badge" style="background:' . Security::escape($color) . '1A;color:' . Security::escape($color) . '">' . Security::escape($typeLabel) . '</span>'
+        . '<span class="dash-event-title">' . Security::escape($customer) . '</span>'
+        . '</div>'
+        . $metaHtml
         . '</div></div>';
+}
+
+function renderTypeSummary(array $events): string
+{
+    $counts = [];
+    foreach ($events as $ev) {
+        $type = $ev['type'] ?? 'event';
+        $label = $ev['type_label'] ?? 'Event';
+        $color = $ev['color'] ?? '#6c757d';
+        if (!isset($counts[$type])) {
+            $counts[$type] = ['label' => $label, 'color' => $color, 'count' => 0];
+        }
+        $counts[$type]['count']++;
+    }
+    $html = '<div class="d-flex flex-wrap gap-1 mb-2">';
+    foreach ($counts as $c) {
+        $html .= '<span class="event-type-badge" style="background:' . Security::escape($c['color']) . '1A;color:' . Security::escape($c['color']) . '">'
+            . Security::escape($c['label']) . ' ' . (int) $c['count'] . '</span>';
+    }
+    $html .= '</div>';
+    return $html;
 }
 ?>
 
@@ -115,6 +153,7 @@ function renderDashEvent(array $ev): string
                         <p class="mb-0">No scheduled events today.</p>
                     </div>
                 <?php else: ?>
+                    <?= renderTypeSummary($todayEvents) ?>
                     <?php foreach (array_slice($todayEvents, 0, 8) as $ev): ?>
                         <?= renderDashEvent($ev) ?>
                     <?php endforeach; ?>
@@ -138,6 +177,7 @@ function renderDashEvent(array $ev): string
                         <p class="mb-0">No upcoming events this week.</p>
                     </div>
                 <?php else: ?>
+                    <?= renderTypeSummary($weekEvents) ?>
                     <?php foreach (array_slice($weekEvents, 0, 8) as $ev): ?>
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-fill me-2"><?= renderDashEvent($ev) ?></div>
@@ -164,6 +204,7 @@ function renderDashEvent(array $ev): string
                         <p class="mb-0">No upcoming events this month.</p>
                     </div>
                 <?php else: ?>
+                    <?= renderTypeSummary($monthEvents) ?>
                     <?php foreach (array_slice($monthEvents, 0, 8) as $ev): ?>
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-fill me-2"><?= renderDashEvent($ev) ?></div>
