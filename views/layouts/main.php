@@ -1,7 +1,7 @@
 <?php
 $activePage = $activePage ?? 'dashboard';
 $sidebarCollapsed = $_COOKIE['sidebar_collapsed'] ?? '0';
-$faviconVer = '4';
+$faviconVer = Url::FAVICON_KEY;
 ?>
 <!DOCTYPE html>
 <html lang="en">

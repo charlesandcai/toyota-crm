@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 class Url
 {
+    // Bumped to force browsers (esp. Safari) to re-resolve the per-URL favicon.
+    public const FAVICON_KEY = '4';
+
     public static function base(): string
     {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -24,7 +27,7 @@ class Url
 
     public static function route(string $route): string
     {
-        return self::base() . '/index.php?route=' . urlencode($route);
+        return self::base() . '/index.php?route=' . urlencode($route) . '&fav=' . self::FAVICON_KEY;
     }
 
     public static function redirect(string $route): void

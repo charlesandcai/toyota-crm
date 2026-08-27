@@ -10,7 +10,7 @@
     <div class="text-center">
         <h1 class="display-1 fw-bold text-muted">404</h1>
         <p class="lead">Page not found</p>
-        <a href="/crm-php/public/index.php?route=dashboard" class="btn btn-danger">Go to Dashboard</a>
+        <a href="<?= Url::route('dashboard') ?>" class="btn btn-danger">Go to Dashboard</a>
     </div>
 </body>
 </html>

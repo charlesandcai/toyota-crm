@@ -194,7 +194,7 @@ document.getElementById('mapForm').addEventListener('submit', async function(e) 
                     <div class="col"><div class="fs-4 fw-bold text-danger">${data.data.failed}</div><div class="small text-muted">Failed</div></div>
                 </div>
                 ${data.data.errors && data.data.errors.length > 0 ? '<div class="mt-3"><strong>Errors:</strong><ul class="small">' + data.data.errors.map(e => '<li>'+e+'</li>').join('') + '</ul></div>' : ''}
-                <a href="/crm-php/public/index.php?route=leads" class="btn btn-danger mt-3">View Leads</a>
+                <a href="<?= Url::route('leads') ?>" class="btn btn-danger mt-3">View Leads</a>
             `;
         } else {
             resultsDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-circle me-1"></i> ${data.message}</div>`;

@@ -300,8 +300,7 @@ $currentDir = $direction ?? 'DESC';
     <nav class="mt-3">
         <ul class="pagination pagination-sm justify-content-center">
             <?php
-            $baseUrl = Url::route('leads/archived') . '?' . http_build_query(array_filter([
-                'route' => 'leads/archived',
+            $baseQuery = http_build_query(array_filter([
                 'search' => $search ?: null,
                 'status_id' => $_GET['status_id'] ?? null,
                 'priority_id' => $_GET['priority_id'] ?? null,
@@ -309,6 +308,7 @@ $currentDir = $direction ?? 'DESC';
                 'sort' => $currentSort,
                 'direction' => $currentDir,
             ]));
+            $baseUrl = Url::route('leads/archived') . ($baseQuery === '' ? '' : '&' . $baseQuery);
             ?>
             <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
                 <a class="page-link" href="<?= $baseUrl ?>&page=<?= $page - 1 ?>">Prev</a>
