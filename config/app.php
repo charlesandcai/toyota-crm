@@ -5,6 +5,12 @@ class Config
 {
     private static array $config = [];
 
+    private const ENV_KEYS = [
+        'APP_NAME', 'APP_ENV', 'APP_URL', 'APP_TIMEZONE',
+        'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD',
+        'APP_DEBUG', 'APP_LOG_LEVEL',
+    ];
+
     public static function load(): void
     {
         $envPath = dirname(__DIR__) . '/.env';
@@ -18,6 +24,13 @@ class Config
                     $value = trim($parts[1]);
                     self::$config[$key] = $value;
                 }
+            }
+        }
+
+        foreach (self::ENV_KEYS as $key) {
+            $value = getenv($key);
+            if ($value !== false) {
+                self::$config[$key] = $value;
             }
         }
     }

@@ -8,7 +8,9 @@ class Url
 
     public static function base(): string
     {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $https = $_SERVER['HTTPS'] ?? '';
+        $forwardedProto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
+        $scheme = (($https !== '' && $https !== 'off') || $forwardedProto === 'https') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         
         $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
