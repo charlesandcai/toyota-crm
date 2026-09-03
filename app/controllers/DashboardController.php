@@ -30,11 +30,13 @@ class DashboardController
         $userId = Security::isAdmin() ? null : Security::userId();
         $salesMetrics = new SalesMetricsService($userId);
 
-        // KPI Cards
-        $totalLeads = $leadModel->getTotalCount($userId);
-        $activeDeals = $leadModel->getActiveDealsCount($userId);
-        $warmLeads = $leadModel->getWarmLeadsCount($userId);
-        $dealsToClose = $leadModel->getDealsToCloseCount($userId);
+        $releaseStage = $settingsModel->getSetting('closed_release_stage') ?: 'Released';
+
+        // KPI Cards (filtered by the selected reporting month/year)
+        $totalLeads = $leadModel->getTotalCount($userId, $year, $month);
+        $activeDeals = $leadModel->getActiveDealsCount($userId, $year, $month, $releaseStage);
+        $warmLeads = $leadModel->getWarmLeadsCount($userId, $year, $month);
+        $dealsToClose = $leadModel->getDealsToCloseCount($userId, $year, $month);
 
         // Sales Target
         $salesData = $salesMetrics->getMonthlyData($year, $month);

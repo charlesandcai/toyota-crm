@@ -28,11 +28,14 @@ class ApiController
         $year = (int) ($_GET['year'] ?? date('Y'));
         $salesData = $salesMetrics->getMonthlyData($year, $month);
 
+        $settingsModel = new SettingsModel();
+        $releaseStage = $settingsModel->getSetting('closed_release_stage') ?: 'Released';
+
         Response::success('', [
-            'total_leads' => $leadModel->getTotalCount($userId),
-            'active_deals' => $leadModel->getActiveDealsCount($userId),
-            'warm_leads' => $leadModel->getWarmLeadsCount($userId),
-            'deals_to_close' => $leadModel->getDealsToCloseCount($userId),
+            'total_leads' => $leadModel->getTotalCount($userId, $year, $month),
+            'active_deals' => $leadModel->getActiveDealsCount($userId, $year, $month, $releaseStage),
+            'warm_leads' => $leadModel->getWarmLeadsCount($userId, $year, $month),
+            'deals_to_close' => $leadModel->getDealsToCloseCount($userId, $year, $month),
             'sales_target' => $salesData,
         ]);
     }

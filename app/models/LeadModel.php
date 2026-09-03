@@ -301,46 +301,103 @@ class LeadModel extends Model
         return $this->count('leads', 'archived = 1');
     }
 
-    public function getTotalCount(?int $userId = null): int
+    public function getTotalCount(?int $userId = null, ?int $year = null, ?int $month = null): int
     {
-        if ($userId !== null) {
-            return $this->count('leads', 'archived = 0 AND user_id = ?', [$userId]);
+        $conditions = ['archived = 0'];
+        $params = [];
+
+        if ($year !== null && $month !== null) {
+            $conditions[] = 'YEAR(initial_contact_date) = ?';
+            $conditions[] = 'MONTH(initial_contact_date) = ?';
+            $params[] = $year;
+            $params[] = $month;
         }
-        return $this->count('leads', 'archived = 0');
+        if ($userId !== null) {
+            $conditions[] = 'user_id = ?';
+            $params[] = $userId;
+        }
+
+        return $this->count('leads', implode(' AND ', $conditions), $params);
     }
 
-    public function getActiveDealsCount(?int $userId = null): int
+    public function getActiveDealsCount(?int $userId = null, ?int $year = null, ?int $month = null, ?string $releaseStage = null): int
     {
-        if ($userId !== null) {
-            return $this->count('leads', 'archived = 0 AND opportunity_stage_id IS NOT NULL AND user_id = ?', [$userId]);
+        $releaseStage = $releaseStage ?: 'Released';
+        $conditions = ['l.archived = 0', 'l.opportunity_stage_id IS NOT NULL', 'os.name <> ?'];
+        $params = [$releaseStage];
+
+        if ($year !== null && $month !== null) {
+            $conditions[] = 'YEAR(l.initial_contact_date) = ?';
+            $conditions[] = 'MONTH(l.initial_contact_date) = ?';
+            $params[] = $year;
+            $params[] = $month;
         }
-        return $this->count('leads', 'archived = 0 AND opportunity_stage_id IS NOT NULL');
+        if ($userId !== null) {
+            $conditions[] = 'l.user_id = ?';
+            $params[] = $userId;
+        }
+
+        $result = $this->fetchOne(
+            "SELECT COUNT(*) as count FROM leads l
+             LEFT JOIN opportunity_stages os ON l.opportunity_stage_id = os.id
+             WHERE " . implode(' AND ', $conditions),
+            $params
+        );
+        return (int) ($result['count'] ?? 0);
     }
 
-    public function getWarmLeadsCount(?int $userId = null): int
+    public function getWarmLeadsCount(?int $userId = null, ?int $year = null, ?int $month = null): int
     {
-        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
-        $params = $userId !== null ? [$userId] : [];
+        $conditions = [
+            "l.archived = 0",
+            "(p.name = 'High' OR os.name IN ('Test Drive','Financing Appli','Approved','Booked','Reserved','With PO','Downpayment') OR l.next_step_date <= ?)",
+        ];
+        $params = [date('Y-m-d')];
+
+        if ($year !== null && $month !== null) {
+            $conditions[] = 'YEAR(l.initial_contact_date) = ?';
+            $conditions[] = 'MONTH(l.initial_contact_date) = ?';
+            $params[] = $year;
+            $params[] = $month;
+        }
+        if ($userId !== null) {
+            $conditions[] = 'l.user_id = ?';
+            $params[] = $userId;
+        }
 
         $result = $this->fetchOne(
             "SELECT COUNT(*) as count FROM leads l
              LEFT JOIN priorities p ON l.priority_id = p.id
              LEFT JOIN opportunity_stages os ON l.opportunity_stage_id = os.id
-             WHERE l.archived = 0 AND (p.name = 'High' OR os.name IN ('Test Drive','Financing Appli','Approved','Booked','Reserved','With PO','Downpayment') OR l.next_step_date <= ?) {$userCondition}",
-            array_merge([date('Y-m-d')], $params)
+             WHERE " . implode(' AND ', $conditions),
+            $params
         );
         return (int) ($result['count'] ?? 0);
     }
 
-    public function getDealsToCloseCount(?int $userId = null): int
+    public function getDealsToCloseCount(?int $userId = null, ?int $year = null, ?int $month = null): int
     {
-        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
-        $params = $userId !== null ? [$userId] : [];
+        $conditions = [
+            'l.archived = 0',
+            "os.name IN ('Approved','Booked','Reserved','With PO','Downpayment')",
+        ];
+        $params = [];
+
+        if ($year !== null && $month !== null) {
+            $conditions[] = 'YEAR(l.initial_contact_date) = ?';
+            $conditions[] = 'MONTH(l.initial_contact_date) = ?';
+            $params[] = $year;
+            $params[] = $month;
+        }
+        if ($userId !== null) {
+            $conditions[] = 'l.user_id = ?';
+            $params[] = $userId;
+        }
 
         $result = $this->fetchOne(
             "SELECT COUNT(*) as count FROM leads l
              LEFT JOIN opportunity_stages os ON l.opportunity_stage_id = os.id
-             WHERE l.archived = 0 AND os.name IN ('Approved','Booked','Reserved','With PO','Downpayment') {$userCondition}",
+             WHERE " . implode(' AND ', $conditions),
             $params
         );
         return (int) ($result['count'] ?? 0);
@@ -368,20 +425,21 @@ class LeadModel extends Model
 
     public function getClosedDealsCount(string $releaseStage, int $year, int $month, ?int $userId = null): int
     {
-        $userCondition = $userId !== null ? ' AND l.user_id = ?' : '';
-        $params = [$releaseStage, $year, $month];
+        $conditions = [
+            'l.archived = 0',
+            'l.release_date IS NOT NULL',
+            'YEAR(l.release_date) = ?',
+            'MONTH(l.release_date) = ?',
+        ];
+        $params = [$year, $month];
         if ($userId !== null) {
+            $conditions[] = 'l.user_id = ?';
             $params[] = $userId;
         }
 
         $result = $this->fetchOne(
             "SELECT COUNT(*) as count FROM leads l
-             LEFT JOIN opportunity_stages os ON l.opportunity_stage_id = os.id
-             WHERE l.archived = 0 
-                AND os.name = ?
-                AND YEAR(l.updated_at) = ?
-                AND MONTH(l.updated_at) = ?
-                {$userCondition}",
+             WHERE " . implode(' AND ', $conditions),
             $params
         );
         return (int) ($result['count'] ?? 0);
